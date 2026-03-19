@@ -128,15 +128,17 @@ export class ScreenshotTransformer {
                     await cdp.send("Fetch.disable");
                     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
                     await page.evaluate(() => {
-                        document.querySelectorAll("img[src]").forEach((img: HTMLImageElement) => {
+                        const imgs = document.querySelectorAll("img[src]");
+                        imgs.forEach((el) => {
+                            const img = el as HTMLImageElement;
                             if (img.complete && img.naturalWidth > 0) return;
                             const s = img.getAttribute("src")!;
                             img.removeAttribute("src");
-                            // force reflow before re-setting src
                             const _reflow = img.offsetHeight;
                             img.setAttribute("src", s);
                         });
-                        document.querySelectorAll("picture source[srcset]").forEach((el: HTMLSourceElement) => {
+                        const sources = document.querySelectorAll("picture source[srcset]");
+                        sources.forEach((el) => {
                             const s = el.getAttribute("srcset")!;
                             el.removeAttribute("srcset");
                             el.setAttribute("srcset", s);

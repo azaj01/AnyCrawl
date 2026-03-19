@@ -1,15 +1,4 @@
-import * as IORedis from "ioredis";
-
-let sharedRedis: IORedis.Redis | null = null;
-function getRedis(): IORedis.Redis {
-    if (!sharedRedis) {
-        sharedRedis = new IORedis.default(process.env.ANYCRAWL_REDIS_URL, {
-            maxRetriesPerRequest: null,
-            lazyConnect: true,
-        });
-    }
-    return sharedRedis;
-}
+import { Utils } from "../Utils.js";
 
 export class DomainCache<T> {
     private readonly local = new Map<string, { value: T; ts: number }>();
@@ -24,7 +13,8 @@ export class DomainCache<T> {
         const l = this.local.get(domain);
         if (l && Date.now() - l.ts < this.localTtl) return l.value;
         try {
-            const raw = await getRedis().get(`${this.prefix}:${domain}`);
+            const redis = Utils.getInstance().getRedisConnection();
+            const raw = await redis.get(`${this.prefix}:${domain}`);
             if (!raw) return null;
             const value = JSON.parse(raw) as T;
             this.local.set(domain, { value, ts: Date.now() });
@@ -36,7 +26,8 @@ export class DomainCache<T> {
 
     async set(domain: string, value: T): Promise<void> {
         try {
-            await getRedis().set(
+            const redis = Utils.getInstance().getRedisConnection();
+            await redis.set(
                 `${this.prefix}:${domain}`,
                 JSON.stringify(value),
                 "EX",
